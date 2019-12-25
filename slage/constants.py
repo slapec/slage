@@ -15,9 +15,9 @@ class Directories:
     SLAGE = '.slage'
     TEMPLATES = 'templates'
     STATIC = 'static'
-    BUILD = 'build'
+    SRC = 'src'
 
-    EXCLUDE_SCANNING = frozenset((SLAGE, TEMPLATES, STATIC, BUILD))
+    EXCLUDE_SCANNING = frozenset((TEMPLATES, STATIC, SRC))
 
 
 class Pages:

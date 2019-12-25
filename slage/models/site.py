@@ -10,7 +10,6 @@ import jinja2
 from slage import constants as consts
 from slage.models import exceptions as exc
 from slage.models.page import TemplatePage, RenderedPage
-from slage import filters
 
 
 log = logging.getLogger(__name__)
@@ -46,13 +45,12 @@ class Site:
 
         self._root = root
         self._slage_root = root / consts.Directories.SLAGE
-        self._templates_root = root / consts.Directories.TEMPLATES
+        self._src_root = src_root = root / consts.Directories.SRC
 
-        self._env = env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(str(root)),
+        self._env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(str(src_root)),
             undefined=jinja2.StrictUndefined
         )
-        env.filters['subrender'] = filters.subrender
 
         self._index_page_path_relative = pathlib.Path(consts.Pages.INDEX)
         self._index_page: Optional[TemplatePage] = None
@@ -61,20 +59,21 @@ class Site:
 
     def build(self, destination: Optional[pathlib.Path] = None) -> None:
         if destination is None:
-            destination = self._root / consts.Directories.BUILD
+            destination = self._root
 
-        log.info('Building slage site in %s', destination)
+        log.info('Writing rendered files in %s', destination)
 
         pages: List[TemplatePage] = []
-        log.info('Reading *.html files in %s', self._root)
-        for html_path in self._root.rglob('*.html'):
-            template_path = html_path.relative_to(self._root)
-            destination_path = destination / template_path
+        log.info('Reading *.html files in %s', self._src_root)
+        for html_path in self._src_root.rglob('*.html'):
+            template_path = html_path.relative_to(self._src_root)
+            root_under_src = template_path.parents[0].name
 
-            if template_path.parents[0].name not in consts.Directories.EXCLUDE_SCANNING:
+            if root_under_src not in consts.Directories.EXCLUDE_SCANNING:
                 log.debug('Found %s', html_path)
 
                 template = self._env.get_template(str(template_path))
+                destination_path = destination / template_path
                 page = TemplatePage(template, template_path, destination_path)
 
                 if page.template_path == self._index_page_path_relative:
@@ -84,6 +83,12 @@ class Site:
                     pages.append(page)
 
                 log.debug('Parsed as %s', page)
+            elif root_under_src == consts.Directories.SRC:
+                log.warning(
+                    'Skipped rendering %s. Avoid placing HTML files in src/src as those would be rendered into src/'
+                    ' thus rendered files would mix with or overwrite source files.',
+                    template_path
+                )
 
         log.debug('Going to render %s pages', len(pages) + bool(self._index_page))
 
