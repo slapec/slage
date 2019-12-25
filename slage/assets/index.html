@@ -1,0 +1,22 @@
+{% extends 'templates/base.html' %}
+
+{% block head %}
+    <meta name="author" content="insert your name here">
+    <meta name="keywords" content="insert, your, keywords, here">
+    <title>My first post</title>
+{% endblock %}
+
+{% block body %}
+    This is the index page:
+
+    <ol>
+        {% for page in pages %}
+        <li>
+            <a href="{{ page.url }}">{{ page.title }}</a> by {{ page.author }}<br>
+            Tags: {{ page.keywords }}
+        </li>
+        {% else %}
+        <li>No pages so far</li>
+        {% endfor %}
+    </ol>
+{% endblock %}
