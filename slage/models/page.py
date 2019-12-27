@@ -38,7 +38,7 @@ class TemplatePage:
 
     @property
     def url(self) -> str:
-        return str(self._template_path)
+        return f'/{self._template_path}'
 
     def render(self, *args, **kwargs) -> 'RenderedPage':
         destination_path = self._destination_path
@@ -77,13 +77,26 @@ class RenderedPage:
         title, = head.xpath('./title/text()')
         self._title = title.strip()
 
+        body, = root.xpath('./body')  # type: lxml.html.HtmlElement
+
+        self._article = None
+        try:
+            article, = body.xpath('./main/article')  # type: lxml.html.HtmlElement
+            self._article = lxml.html.tostring(article).decode()
+        except ValueError:
+            pass
+
     @property
     def template_page(self) -> TemplatePage:
         return self._template_page
 
     @property
     def url(self) -> str:
-        return self.template_page.url
+        return self._template_page.url
+
+    @property
+    def created_at(self) -> datetime.datetime:
+        return self._template_page.created_at
 
     @property
     def content(self) -> str:
@@ -104,3 +117,7 @@ class RenderedPage:
     @property
     def title(self) -> str:
         return self._title
+
+    @property
+    def article(self) -> str:
+        return self._article

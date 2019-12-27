@@ -1,13 +1,14 @@
 # coding: utf-8
 
 import logging
+import operator
 import pathlib
 import shutil
 from typing import List, Optional
 
 import jinja2
 
-from slage import constants as consts
+from slage import constants as consts, utils
 from slage.models import exceptions as exc
 from slage.models.page import TemplatePage, RenderedPage
 
@@ -55,6 +56,9 @@ class Site:
         self._index_page_path_relative = pathlib.Path(consts.Pages.INDEX)
         self._index_page: Optional[TemplatePage] = None
 
+        self._about_page_path_relative = pathlib.Path(consts.Pages.ABOUT)
+        self._about_page: Optional[TemplatePage] = None
+
         log.debug('All set')
 
     def build(self, destination: Optional[pathlib.Path] = None) -> None:
@@ -79,6 +83,9 @@ class Site:
                 if page.template_path == self._index_page_path_relative:
                     log.debug('Index page exists')
                     self._index_page = page
+                elif page.template_path == self._about_page_path_relative:
+                    log.debug('About page exists')
+                    self._about_page = page
                 else:
                     pages.append(page)
 
@@ -92,16 +99,24 @@ class Site:
 
         log.debug('Going to render %s pages', len(pages) + bool(self._index_page))
 
-        rendered_pages: List[RenderedPage] = []
-        for page in pages:
-            rendered_page = page.render()
-            rendered_pages.append(rendered_page)
+        pages.sort(key=operator.attrgetter('created_at'), reverse=True)
+        page_chunks = list(utils.chunks(pages, 100))
+        for index_counter, chunk in enumerate(page_chunks):
+            rendered_pages: List[RenderedPage] = []
+            for page in chunk:
+                rendered_page = page.render()
+                rendered_pages.append(rendered_page)
 
-        if self._index_page:
-            log.debug('Rendering the index page')
-            self._index_page.render({
-                'pages': rendered_pages
-            })
+            if self._index_page:
+                log.debug('Rendering index page %s', index_counter)
+                self._index_page.render({
+                    'pages': rendered_pages,
+                    'page_count': len(page_chunks)
+                })
+
+        if self._about_page:
+            log.debug('Rendering the about page')
+            self._about_page.render()
 
     def __repr__(self):
         return f'<Site({self._root})>'

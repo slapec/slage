@@ -22,3 +22,4 @@ class Directories:
 
 class Pages:
     INDEX = 'index.html'
+    ABOUT = 'about.html'
