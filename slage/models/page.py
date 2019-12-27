@@ -1,8 +1,12 @@
 # coding: utf-8
 
+import os
 import logging
+import datetime
 
-from typing import TYPE_CHECKING, Optional, Dict, Tuple
+from typing import TYPE_CHECKING, Tuple
+
+from slage import constants as consts
 
 import lxml.etree
 import lxml.html
@@ -16,14 +20,21 @@ if TYPE_CHECKING:
 
 
 class TemplatePage:
+    generator = f'{consts.__project__} {consts.__version__}'
+
     def __init__(self, template: 'jinja2.Template', template_path: 'pathlib.Path', destination_path: 'pathlib.Path') -> None:
         self._template = template
         self._template_path = template_path
         self._destination_path = destination_path
+        self._created_at = datetime.datetime.fromtimestamp(os.stat(template.filename).st_ctime)
 
     @property
     def template_path(self) -> 'pathlib.Path':
         return self._template_path
+
+    @property
+    def created_at(self) -> datetime.datetime:
+        return self._created_at
 
     @property
     def url(self) -> str:
@@ -34,7 +45,10 @@ class TemplatePage:
 
         log.info('Rendering: %s -> %s', self._template_path, destination_path)
 
-        render = self._template.render(*args, **kwargs)
+        render = self._template.render(*args, **{
+            **kwargs,
+            'this': self
+        })
         destination_path.parent.mkdir(parents=True, exist_ok=True)
         destination_path.write_text(render)
 
